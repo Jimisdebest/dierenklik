@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dieren Klik Spel</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #e0f7fa;
+        }
+        #gameArea {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: none;
+        }
+        .dier, .special {
+            position: absolute;
+            font-size: 80px; /* Grotere dieren */
+            cursor: pointer;
+        }
+        .special {
+            font-size: 100px; /* Grotere ster */
+            color: gold;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #00796b;
+        }
+        #pauseButton, #menuButton {
+            position: absolute;
+            top: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #pauseButton {
+            right: 10px;
+        }
+        #menuButton {
+            right: 100px;
+        }
+        #startScreen, #restartScreen, #idleScreen, #menuScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #b2ebf2;
+        }
+        #startButton, #restartButton, #resumeButton, #menuResumeButton, #menuRestartButton, #menuStartButton {
+            padding: 10px 20px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        #levelUpMessage, #verificationPrompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 10px;
+            display: none;
+            font-size: 24px;
+            color: #00796b;
+            text-align: center;
+            width: 300px;
+        }
+        #verificationInput {
+            margin-top: 10px;
+            padding: 5px;
+            font-size: 18px;
+            width: 100%;
+        }
+        #submitVerification {
+            margin-top: 10px;
+            padding: 5px 10px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Welkom bij het Dieren Klik Spel!</h1>
+        <button id="startButton">Start Spel</button>
+    </div>
+    <div id="gameArea">
+        <div id="score">Score: 0</div>
+        <button id="pauseButton">Pauze</button>
+        <button id="menuButton">Menu</button>
+        <div id="levelUpMessage">Level Up!</div>
+    </div>
+    <div id="verificationPrompt">
+        <div id="verificationEmoji"></div>
+        <input type="text" id="verificationInput" placeholder="Wie is dit?">
+        <button id="submitVerification">Submit</button>
+    </div>
+    <div id="restartScreen" style="display: none;">
+        <h1>Wil je opnieuw beginnen?</h1>
+        <button id="restartButton">Opnieuw Beginnen</button>
+    </div>
+    <div id="idleScreen" style="display: none;">
+        <h1>Ben je er nog?</h1>
+        <button id="resumeButton">Doorgaan</button>
+    </div>
+    <div id="menuScreen" style="display: none;">
+        <h1>Menu</h1>
+        <button id="menuResumeButton">Doorgaan</button>
+        <button id="menuRestartButton">Opnieuw Beginnen</button>
+        <button id="menuStartButton">Naar Startscherm</button>
+    </div>
+    <script>
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const gameArea = document.getElementById('gameArea');
+        const scoreDisplay = document.getElementById('score');
+        const levelUpMessage = document.getElementById('levelUpMessage');
+        const verificationPrompt = document.getElementById('verificationPrompt');
+        const verificationEmoji = document.getElementById('verificationEmoji');
+        const verificationInput = document.getElementById('verificationInput');
+        const submitVerification = document.getElementById('submitVerification');
+        const restartScreen = document.getElementById('restartScreen');
+        const restartButton = document.getElementById('restartButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const menuButton = document.getElementById('menuButton');
+        const idleScreen = document.getElementById('idleScreen');
+        const resumeButton = document.getElementById('resumeButton');
+        const menuScreen = document.getElementById('menuScreen');
+        const menuResumeButton = document.getElementById('menuResumeButton');
+        const menuRestartButton = document.getElementById('menuRestartButton');
+        const menuStartButton = document.getElementById('menuStartButton');
+        let score = 0;
+        let spawnInterval = 3000; // Start met 3 seconden
+        let currentEmoji = '';
+        let gamePaused = false;
+        let gameInterval;
+        let idleTimeout;
+
+        const dierenNamen = {
+            '🐸': 'pepe',
+            '🐷': 'james',
+            '🦆': 'yara',
+            '🐴': 'yasmina',
+            '🧔': 'renzo'
+        };
+
+        startButton.onclick = function() {
+            startScreen.style.display = 'none';
+            showVerificationPrompt();
+        };
+
+        function showVerificationPrompt() {
+            const dieren = Object.keys(dierenNamen);
+            currentEmoji = dieren[Math.floor(Math.random() * dieren.length)];
+            verificationEmoji.textContent = currentEmoji;
+            verificationPrompt.style.display = 'block';
+            verificationInput.value = '';
+            verificationInput.focus();
+        }
+
+        submitVerification.onclick = function() {
+            const naam = verificationInput.value.toLowerCase();
+            if (naam === dierenNamen[currentEmoji]) {
+                verificationPrompt.style.display = 'none';
+                gameArea.style.display = 'block';
+                startGame();
+            } else {
+                alert('Fout! Probeer het opnieuw.');
+            }
+        };
+
+        function startGame() {
+            gamePaused = false;
+            resetIdleTimer();
+            gameInterval = setInterval(() => {
+                if (!gamePaused) {
+                    createRandomDier();
+                    createSpecialItem();
+                }
+            }, spawnInterval);
+        }
+
+        function createDier(emoji) {
+            const dier = document.createElement('div');
+            dier.textContent = emoji;
+            dier.classList.add('dier');
+            dier.style.top = Math.random() * (window.innerHeight - 80) + 'px';
+            dier.style.left = Math.random() * (window.innerWidth - 80) + 'px';
+            dier.onclick = function() {
+                score++;
+                scoreDisplay.textContent = 'Score: ' + score;
+                gameArea.removeChild(dier);
+                if (score % 10 === 0) {
+                    makeGameHarder();
+                }
+                resetIdleTimer();
+            };
+            gameArea.appendChild(dier);
+        }
+
+        function createSpecialItem() {
+            if (Math.random() < 0.1) { // 10% kans dat de ster verschijnt
+                const ster = document.createElement('div');
+                ster.textContent = '⭐';
+                ster.classList.add('special');
+                ster.style.top = Math.random() * (window.innerHeight - 100) + 'px';
+                ster.style.left = Math.random() * (window.innerWidth - 100) + 'px';
+                ster.onclick = function() {
+                    score += 5; // Extra punten voor de ster
+                    scoreDisplay.textContent = 'Score: ' + score;
+                    gameArea.removeChild(ster);
+                    resetIdleTimer();
+                };
+                gameArea.appendChild(ster);
+                setTimeout(() => {
+                    if (gameArea.contains(ster)) {
+                        gameArea.removeChild(ster);
+                    }
+                }, 3000); // Ster verdwijnt na 3 seconden
+            }
+        }
+
+        function createRandomDier() {
+            const dieren = ['🐸', '🐷', '🦆', '🐴', '🧔']; // Kikker, big, eend, paard en holbewoner
+            const randomDier = dieren[Math.floor(Math.random() * dieren.length)];
+            createDier(randomDier);
+        }
+
+        function makeGameHarder() {
+            spawnInterval -= 200; // Maak het spel sneller
+            clearInterval(gameInterval);
+            startGame();
+        }
+
+        pauseButton.onclick = function() {
+            gamePaused = !gamePaused;
+            pauseButton.textContent = gamePaused ? 'Doorgaan' : 'Pauze';
+            if (!gamePaused) {
+                resetIdleTimer();
+            }
+        };
+
+        menuButton.onclick = function() {
+            gamePaused = true;
+            menuScreen.style.display = 'flex';
+        };
+
+        menuResumeButton.onclick = function() {
+            menuScreen.style.display = 'none';
+            gamePaused = false;
+            resetIdleTimer();
+        };
+
+        menuRestartButton.onclick = function() {
+            menuScreen.style.display = 'none';
+            score = 0;
+            spawnInterval = 3000;
+            scoreDisplay.textContent = 'Score: 0';
+            showVerificationPrompt();
+        };
+
+        menuStartButton.onclick = function() {
+            menuScreen.style.display = 'none';
+            gameArea.style.display = 'none';
+            startScreen.style.display = 'flex';
+        };
+
+        restartButton.onclick = function() {
+            restartScreen.style.display = 'none';
+            score = 0;
+            spawnInterval = 3000;
+            scoreDisplay.textContent = 'Score: 0';
+            showVerificationPrompt();
+        };
+
+        resumeButton.onclick = function() {
+            idleScreen.style.display = 'none';
+            gamePaused = false;
+            resetIdleTimer();
+            startGame();
+        };
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimeout);
+            idleTimeout = setTimeout(() => {
+                gamePaused = true;
+                idleScreen.style.display = 'flex';
+            }, 60000); // Pauzeer na 60 seconden inactiviteit
+        }
+
+        // Voeg een functie toe om het spel te beëindigen en de restartScreen te tonen
+        function endGame() {
+            clearInterval(gameInterval);
+            gameArea.style.display = 'none';
+            restartScreen.style.display = 'flex';
+        }
+
+        // Voorbeeld van hoe je het spel kunt beëindigen (bijvoorbeeld na een bepaald aantal levels)
+        setTimeout(endGame, 90000); // Beëindig het spel na 90 seconden
+    </script>
+</body>
+</html>
